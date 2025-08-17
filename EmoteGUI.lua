@@ -1,8 +1,6 @@
 local Players = game:GetService("Players")
-local StarterGui = game:GetService("StarterGui")
 local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
-
+local StarterGui = game:GetService("StarterGui")
 local player = Players.LocalPlayer
 
 -- GUI
@@ -14,52 +12,28 @@ local BackFrame = Instance.new("Frame")
 BackFrame.Size = UDim2.new(0.9,0,0.6,0)
 BackFrame.AnchorPoint = Vector2.new(0.5,0.5)
 BackFrame.Position = UDim2.new(0.5,0,0.5,0)
+BackFrame.BackgroundTransparency = 0.4
 BackFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-BackFrame.BackgroundTransparency = 0.3
 BackFrame.Visible = false
 BackFrame.Parent = ScreenGui
-BackFrame.Active = true
 
-local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1,0,1,0)
-Scroll.CanvasSize = UDim2.new(0,0,0,0)
-Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-Scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-Scroll.BackgroundTransparency = 1
-Scroll.Parent = BackFrame
-
-local Grid = Instance.new("UIGridLayout")
-Grid.CellSize = UDim2.new(0.22,0,0,60)
-Grid.CellPadding = UDim2.new(0.02,0,0.02,0)
-Grid.SortOrder = Enum.SortOrder.LayoutOrder
-Grid.Parent = Scroll
-
--- Movable button
 local OpenButton = Instance.new("TextButton")
 OpenButton.Text = "Emotes"
 OpenButton.Size = UDim2.new(0.15,0,0.07,0)
-OpenButton.Position = UDim2.new(0.85,0,0.85,0) -- bottom right
-OpenButton.BackgroundColor3 = Color3.fromRGB(30,30,30)
+OpenButton.Position = UDim2.new(0.85,0,0.9,0)
+OpenButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
 OpenButton.TextColor3 = Color3.new(1,1,1)
 OpenButton.TextScaled = true
 OpenButton.Parent = ScreenGui
-OpenButton.Active = true
 
--- Dragging functionality
-local dragging, dragInput, dragStart, startPos
-
-local function update(input)
-    local delta = input.Position - dragStart
-    OpenButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-                                    startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-
+-- Drag & lock logic
+local dragging = false
+local dragInput, mousePos, framePos
 OpenButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
-        dragStart = input.Position
-        startPos = OpenButton.Position
-
+        mousePos = input.Position
+        framePos = OpenButton.Position
         input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
@@ -74,18 +48,37 @@ OpenButton.InputChanged:Connect(function(input)
     end
 end)
 
-RunService.RenderStepped:Connect(function()
-    if dragging and dragInput then
-        update(dragInput)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        OpenButton.Position = UDim2.new(
+            framePos.X.Scale, framePos.X.Offset + delta.X,
+            framePos.Y.Scale, framePos.Y.Offset + delta.Y
+        )
     end
 end)
 
--- Open/close menu
+-- Toggle GUI
 OpenButton.MouseButton1Click:Connect(function()
     BackFrame.Visible = not BackFrame.Visible
 end)
 
--- Emotes table
+-- Scrolling frame
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1,0,1,0)
+Scroll.CanvasSize = UDim2.new(0,0,0,0)
+Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Scroll.ScrollingDirection = Enum.ScrollingDirection.Y
+Scroll.BackgroundTransparency = 1
+Scroll.Parent = BackFrame
+
+local Grid = Instance.new("UIGridLayout")
+Grid.CellSize = UDim2.new(0.22,0,0,60)
+Grid.CellPadding = UDim2.new(0.02,0,0.02,0)
+Grid.SortOrder = Enum.SortOrder.LayoutOrder
+Grid.Parent = Scroll
+
+-- Emotes list
 local Emotes = {
     -- Original 13
     {name = "Around Town", id = 3576747102},
@@ -101,8 +94,7 @@ local Emotes = {
     {name = "Bodybuilder", id = 3994130516},
     {name = "Jacks", id = 3570649048},
     {name = "Shuffle", id = 4391208058},
-
-    -- Extra & other special emotes
+    -- Extras & special
     {name = "Dorky Dance", id = 4212499637},
     {name = "Flex Walk", id = 15506506103},
     {name = "Dizzy", id = 3934986896},
@@ -144,7 +136,7 @@ local Emotes = {
     {name = "Extra 32 - Michael Myers Dance", id = 113312074616410},
 }
 
--- Play emote
+-- Play emote function
 local function playEmote(id)
     local character = player.Character
     if not character then return end
@@ -170,14 +162,13 @@ local function playEmote(id)
     end
 end
 
--- Populate buttons
+-- Add buttons
 for _, emote in ipairs(Emotes) do
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0.9,0,0,50)
     button.Text = emote.name
     button.BackgroundColor3 = Color3.fromRGB(60,60,60)
     button.TextColor3 = Color3.new(1,1,1)
-    button.TextScaled = true
     button.Parent = Scroll
     button.MouseButton1Click:Connect(function()
         playEmote(emote.id)
