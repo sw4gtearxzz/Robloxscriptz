@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -10,57 +11,14 @@ ScreenGui.Name = "Emotes"
 ScreenGui.Parent = CoreGui
 
 local BackFrame = Instance.new("Frame")
-BackFrame.Size = UDim2.new(0.9, 0, 0.6, 0)
+BackFrame.Size = UDim2.new(0.9,0,0.6,0)
 BackFrame.AnchorPoint = Vector2.new(0.5,0.5)
 BackFrame.Position = UDim2.new(0.5,0,0.5,0)
+BackFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 BackFrame.BackgroundTransparency = 0.3
 BackFrame.Visible = false
 BackFrame.Parent = ScreenGui
-
-local OpenButton = Instance.new("TextButton")
-OpenButton.Text = "Emotes"
-OpenButton.Size = UDim2.new(0.2,0,0.08,0)
-OpenButton.Position = UDim2.new(0.8,0,0.9,0) -- bottom right
-OpenButton.BackgroundColor3 = Color3.fromRGB(30,30,30)
-OpenButton.TextColor3 = Color3.new(1,1,1)
-OpenButton.TextScaled = true
-OpenButton.Parent = ScreenGui
-
--- Dragging for PC & mobile
-local dragging, dragInput, dragStart, startPos
-local function update(input)
-	local delta = input.Position - dragStart
-	OpenButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
-
-OpenButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragStart = input.Position
-		startPos = OpenButton.Position
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then
-				dragging = false
-			end
-		end)
-	end
-end)
-
-OpenButton.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
-end)
-
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		update(input)
-	end
-end)
-
-OpenButton.MouseButton1Click:Connect(function()
-	BackFrame.Visible = not BackFrame.Visible
-end)
+BackFrame.Active = true
 
 local Scroll = Instance.new("ScrollingFrame")
 Scroll.Size = UDim2.new(1,0,1,0)
@@ -75,6 +33,57 @@ Grid.CellSize = UDim2.new(0.22,0,0,60)
 Grid.CellPadding = UDim2.new(0.02,0,0.02,0)
 Grid.SortOrder = Enum.SortOrder.LayoutOrder
 Grid.Parent = Scroll
+
+-- Movable button
+local OpenButton = Instance.new("TextButton")
+OpenButton.Text = "Emotes"
+OpenButton.Size = UDim2.new(0.15,0,0.07,0)
+OpenButton.Position = UDim2.new(0.85,0,0.85,0) -- bottom right
+OpenButton.BackgroundColor3 = Color3.fromRGB(30,30,30)
+OpenButton.TextColor3 = Color3.new(1,1,1)
+OpenButton.TextScaled = true
+OpenButton.Parent = ScreenGui
+OpenButton.Active = true
+
+-- Dragging functionality
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    OpenButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+                                    startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+OpenButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = OpenButton.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+OpenButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if dragging and dragInput then
+        update(dragInput)
+    end
+end)
+
+-- Open/close menu
+OpenButton.MouseButton1Click:Connect(function()
+    BackFrame.Visible = not BackFrame.Visible
+end)
 
 -- Emotes table
 local Emotes = {
@@ -93,7 +102,7 @@ local Emotes = {
     {name = "Jacks", id = 3570649048},
     {name = "Shuffle", id = 4391208058},
 
-    -- Extra & special emotes
+    -- Extra & other special emotes
     {name = "Dorky Dance", id = 4212499637},
     {name = "Flex Walk", id = 15506506103},
     {name = "Dizzy", id = 3934986896},
@@ -131,44 +140,47 @@ local Emotes = {
     {name = "Extra 28", id = 131763631172236},
     {name = "Extra 29", id = 90101899912160},
     {name = "Extra 30", id = 103040723950430},
-    {name = "Extra 31", id = 128730689645069},
-    {name = "Extra 32", id = 113312074616410},
+    {name = "Extra 31 - India Boat Kid", id = 128730689645069},
+    {name = "Extra 32 - Michael Myers Dance", id = 113312074616410},
 }
 
+-- Play emote
 local function playEmote(id)
-	local character = player.Character
-	if not character then return end
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
-	if humanoid.RigType == Enum.HumanoidRigType.R15 then
-		local success, track = pcall(function()
-			return humanoid:PlayEmoteAndGetAnimTrackById(id)
-		end)
-		if not success then
-			StarterGui:SetCore("SendNotification", {
-				Title = "Emote Error",
-				Text = "Failed to play emote "..id,
-				Duration = 3
-			})
-		end
-	else
-		StarterGui:SetCore("SendNotification", {
-			Title = "R6 Detected",
-			Text = "You must use R15 to play these emotes",
-			Duration = 3
-		})
-	end
+    local character = player.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    if humanoid.RigType == Enum.HumanoidRigType.R15 then
+        local success, track = pcall(function()
+            return humanoid:PlayEmoteAndGetAnimTrackById(id)
+        end)
+        if not success then
+            StarterGui:SetCore("SendNotification", {
+                Title = "Emote Error",
+                Text = "Failed to play emote "..id,
+                Duration = 3
+            })
+        end
+    else
+        StarterGui:SetCore("SendNotification", {
+            Title = "R6 Detected",
+            Text = "You must use R15 to play these emotes",
+            Duration = 3
+        })
+    end
 end
 
+-- Populate buttons
 for _, emote in ipairs(Emotes) do
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(0.9,0,0,50)
-	button.Text = emote.name
-	button.BackgroundColor3 = Color3.fromRGB(60,60,60)
-	button.TextColor3 = Color3.new(1,1,1)
-	button.Parent = Scroll
-	button.MouseButton1Click:Connect(function()
-		playEmote(emote.id)
-		BackFrame.Visible = false
-	end)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.9,0,0,50)
+    button.Text = emote.name
+    button.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    button.TextColor3 = Color3.new(1,1,1)
+    button.TextScaled = true
+    button.Parent = Scroll
+    button.MouseButton1Click:Connect(function()
+        playEmote(emote.id)
+        BackFrame.Visible = false
+    end)
 end
